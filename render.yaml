@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: vie-au-congo-online
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
