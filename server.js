@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const { neon } = require('@neondatabase/serverless');
 const scrypt = promisify(crypto.scrypt);
 
+const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: false }, maxHttpBufferSize: 1e5, pingTimeout: 20000, pingInterval: 25000 });
