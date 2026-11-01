@@ -143,6 +143,54 @@ io.on('connection', socket => {
   const previous = online.get(key); if (previous && previous.id !== socket.id) previous.socket.disconnect(true);
   online.set(key, { username: user.username, id: socket.id, socket }); socketUser.set(socket.id, key);
   socket.emit('chat:history', db.publicMessages.slice(-100)); sendOnlineList();
+    // ---------- Synchronisation du monde 3D ----------
+  socket.on('world:join', payload => {
+    const city = cleanText(payload && payload.city, 24);
+    const place = cleanText(payload && payload.place, 32);
+
+    if (!/^[a-z0-9_-]+$/i.test(city) || !/^[a-z0-9_-]+$/i.test(place)) return;
+
+    const room = `world:${city}:${place}`;
+
+    if (socket.data.worldRoom && socket.data.worldRoom !== room) {
+      socket.to(socket.data.worldRoom).emit('player:leave', {
+        username: user.username
+      });
+      socket.leave(socket.data.worldRoom);
+    }
+
+    socket.join(room);
+    socket.data.worldRoom = room;
+
+    const players = [...(io.sockets.adapter.rooms.get(room) || [])]
+      .filter(id => id !== socket.id)
+      .map(id => io.sockets.sockets.get(id)?.data.worldPosition)
+      .filter(Boolean);
+
+    socket.emit('world:players', players);
+  });
+
+  socket.on('player:move', payload => {
+    const room = socket.data.worldRoom;
+    if (!room || !payload) return;
+
+    const x = Number(payload.x);
+    const z = Number(payload.z);
+    const rotation = Number(payload.rotation);
+
+    if (![x, z, rotation].every(Number.isFinite)) return;
+    if (Math.abs(x) > 1000 || Math.abs(z) > 1000) return;
+
+    const player = {
+      username: user.username,
+      x,
+      z,
+      rotation
+    };
+
+    socket.data.worldPosition = player;
+    socket.to(room).emit('player:move', player);
+  });
   socket.on('chat:send', payload => {
     const now = Date.now(); if (socket.data.lastPublic && now - socket.data.lastPublic < 900) return socket.emit('server:error', 'Attends un instant avant d’envoyer un autre message.'); socket.data.lastPublic = now;
     const text = cleanText(payload && payload.text, 500); if (!text) return;
@@ -164,5 +212,10 @@ io.on('connection', socket => {
     socket.emit('dm:history', messages);
   });
   socket.on('disconnect', () => { const k = socketUser.get(socket.id); socketUser.delete(socket.id); if (k && online.get(k)?.id === socket.id) online.delete(k); sendOnlineList(); });
+      if (socket.data.worldRoom) {
+      socket.to(socket.data.worldRoom).emit('player:leave', {
+        username: user.username
+      });
+      }
 });
 server.listen(PORT, '0.0.0.0', () => console.log(`VIE AU CONGO Online lancé sur le port ${PORT}`));
