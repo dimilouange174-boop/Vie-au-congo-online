@@ -102,6 +102,33 @@ app.get('/api/save', async (req, res) => {
   }
 });
 
+app.put('/api/save', async (req, res) => {
+  try {
+    const u = verifyToken(readToken(req));
+    await ensureSaveTable();
+
+    const save = req.body && req.body.save;
+
+    if (!save || typeof save !== 'object' || Array.isArray(save)) {
+      return res.status(400).json({ error: 'Sauvegarde invalide.' });
+    }
+
+    await sql`
+      INSERT INTO game_saves (username, save_data, updated_at)
+      VALUES (${u.username}, ${JSON.stringify(save)}::jsonb, NOW())
+      ON CONFLICT (username)
+      DO UPDATE SET
+        save_data = EXCLUDED.save_data,
+        updated_at = NOW()
+    `;
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('save game', e);
+    res.status(500).json({ error: 'Impossible d’enregistrer la sauvegarde.' });
+  }
+});
+
 const online = new Map(); // username lower-case -> socket ID
 const socketUser = new Map();
 function sendOnlineList() { const list = [...online.values()].map(x => ({ username: x.username })); io.emit('online:list', list); }
