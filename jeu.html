@@ -441,11 +441,15 @@ function updateRemotePlayer(data){
 
   if(!p){
     p = human({
-      name:data.username,
-      skin:'#75452f',
-      shirt:'#009543',
-      pants:'#303d39'
-    });
+  name:data.username,
+  skin:data.skin || '#75452f',
+  shirt:data.shirt || '#009543',
+  pants:data.pants || '#303d39',
+  shoes:data.shoes || '#252b29',
+  hair:data.hair || '#211b18',
+  hs:Number(data.hs) || 0,
+  acc:Number(data.acc) || 0
+});
 
     nameTag(p,data.username,'Joueur en ligne');
     scene.add(p);
@@ -693,10 +697,17 @@ function enter(pid){const was=S.pid;S.pid=pid;if(pid!==was){S.ins=0;fmv=false;fs
   });
 
   window.gameSocket.emit('player:move',{
-    x:me.position.x,
-    z:me.position.z,
-    rotation:me.rotation.y
-  });
+  x:me.position.x,
+  z:me.position.z,
+  rotation:me.rotation.y,
+  skin:S.skin,
+  shirt:S.shirt,
+  pants:S.pants,
+  shoes:S.shoes,
+  hair:S.hair,
+  hs:S.hs,
+  acc:S.acc
+});
  }me.rotation.y=Math.PI;camera.position.set(0,11,info.z+12);
  const gm={sch:1,htl:1,rst:1,std:1,chu:1,prt:1};if(gm[pid])goal(pid);if(pid==='mkt')goal('mkt');if(pid==='pie')goal('pie');if(pid==='cli')goal('cli');sky();hud();save()}
 const TOP=[['joke','😂','Raconter une blague'],['compl','⭐','Faire un compliment'],['foot','⚽','Parler de foot'],['food','🍲','Parler de cuisine'],['city','🏙️','Parler de la ville'],['work','💼','Parler du travail'],['music','🎵','Parler de musique']],TK=TOP.map(t=>t[0]);
@@ -1297,10 +1308,17 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/
  if(mode==='play'){let mv=0;if(actn){actn.t+=dt;animAct(now);$('abar').style.width=Math.min(100,actn.t/actn.d*100)+'%';if(actn.t>=actn.d)endAct(1)}else if(target){const dx=target.x-me.position.x,dz=target.z-me.position.z,d=Math.hypot(dx,dz);if(d<.15)target=null;else{const s=Math.min(d,5*dt);const nx=me.position.x+dx/d*s,nz=me.position.z+dz/d*s,B2=(x,z)=>bd.obs&&bd.obs.some(o=>x>o[0]&&x<o[2]&&z>o[1]&&z<o[3]);if(!B2(nx,nz)){me.position.x=nx;me.position.z=nz}else if(!B2(nx,me.position.z))me.position.x=nx;else if(!B2(me.position.x,nz))me.position.z=nz;else target=null;me.rotation.y=Math.atan2(dx,dz);mv=1}}if(!actn){walk(me,now/110,mv);doorChk()}if(window.gameSocket && window.gameSocket.connected && now-lastNetworkMove>100){
   lastNetworkMove=now;
   window.gameSocket.emit('player:move',{
-    x:me.position.x,
-    z:me.position.z,
-    rotation:me.rotation.y
-  });
+  x:me.position.x,
+  z:me.position.z,
+  rotation:me.rotation.y,
+  skin:S.skin,
+  shirt:S.shirt,
+  pants:S.pants,
+  shoes:S.shoes,
+  hair:S.hair,
+  hs:S.hs,
+  acc:S.acc
+});
  }
   for(const c of traf){const u=c.userData,dz=(me.position.z-c.position.z)*u.dir;let sp=u.v;for(const d of traf)if(d!==c&&d.userData.dir===u.dir){const gp_=(d.position.z-c.position.z)*u.dir;if(gp_>0&&gp_<9)sp=0}if(dz>0&&dz<7&&Math.abs(me.position.x-c.position.x)<2.6)sp=0;u.cur+=(sp-u.cur)*Math.min(1,dt*3);c.position.z+=u.dir*u.cur*dt;if(c.position.z>48)c.position.z=-48;if(c.position.z<-48)c.position.z=48}
   for(const n of npcs){const u=n.userData;
