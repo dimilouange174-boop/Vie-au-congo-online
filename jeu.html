@@ -525,6 +525,40 @@ function goal(id){if(S.goals[id])return;S.goals[id]=1;earn(500,'Objectif : '+GOA
 const save=()=>{
  S.t=Date.now();
  let serialized;
+ try{serialized=JSON.stringify(S)}
+ catch(e){console.warn('Sauvegarde impossible :',e);return false}
+
+ try{
+  const previous=localStorage.getItem('vac5');
+  if(previous){
+   try{
+    const p=JSON.parse(previous);
+    if(p&&typeof p.name==='string'&&CITIES[p.city])
+     localStorage.setItem('vac5_backup',previous);
+   }catch(e){}
+  }
+ }catch(e){}
+
+ try{
+  localStorage.setItem('vac5',serialized);
+  if(typeof window.__vacCloudSave==='function')
+   window.__vacCloudSave(serialized);
+  return true;
+ }catch(e){
+  try{
+   localStorage.removeItem('vac5_backup');
+   localStorage.setItem('vac5',serialized);
+   if(typeof window.__vacCloudSave==='function')
+    window.__vacCloudSave(serialized);
+   return true;
+  }catch(e2){
+   console.warn('Espace de sauvegarde insuffisant.',e2);
+   return false;
+  }
+ }
+};
+ S.t=Date.now();
+ let serialized;
  try{serialized=JSON.stringify(S)}catch(e){console.warn('Sauvegarde impossible : données non sérialisables.',e);return false}
  // Garde une copie de la dernière sauvegarde valide avant de remplacer la principale.
  try{
