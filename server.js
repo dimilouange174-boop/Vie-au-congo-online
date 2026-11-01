@@ -45,7 +45,7 @@ const publicUser = u => ({ username: u.username, createdAt: u.createdAt });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: 'draft-7', legacyHeaders: false, message: { error: 'Trop de tentatives. Attends quelques minutes avant de réessayer.' } });
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-app.use(express.json({ limit: '12kb' }));
+app.use(express.json({ limit: '2mb' }));
 app.use('/api/login', authLimiter); app.use('/api/register', authLimiter);
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
