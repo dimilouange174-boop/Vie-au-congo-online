@@ -456,8 +456,10 @@ function updateRemotePlayer(data){
     remotePlayers.set(data.username,p);
   }
 
-  p.position.set(x,0,z);
-  p.rotation.y = rotation;
+  const moving = Math.hypot(x-p.position.x,z-p.position.z) > 0.015;
+p.userData.remoteMoving = moving;
+p.position.set(x,0,z);
+p.rotation.y = rotation;
 }
 
 function removeRemotePlayer(username){
@@ -1305,6 +1307,9 @@ addEventListener('pointerup',()=>dr=null);addEventListener('resize',()=>{if(!$('
 let lastNetworkMove=0;
  let last=performance.now();
 function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;weather(dt);
+                   for(const p of remotePlayers.values()){
+  walk(p,now/110,p.userData.remoteMoving?1:0);
+                   }
  if(mode==='play'){let mv=0;if(actn){actn.t+=dt;animAct(now);$('abar').style.width=Math.min(100,actn.t/actn.d*100)+'%';if(actn.t>=actn.d)endAct(1)}else if(target){const dx=target.x-me.position.x,dz=target.z-me.position.z,d=Math.hypot(dx,dz);if(d<.15)target=null;else{const s=Math.min(d,5*dt);const nx=me.position.x+dx/d*s,nz=me.position.z+dz/d*s,B2=(x,z)=>bd.obs&&bd.obs.some(o=>x>o[0]&&x<o[2]&&z>o[1]&&z<o[3]);if(!B2(nx,nz)){me.position.x=nx;me.position.z=nz}else if(!B2(nx,me.position.z))me.position.x=nx;else if(!B2(me.position.x,nz))me.position.z=nz;else target=null;me.rotation.y=Math.atan2(dx,dz);mv=1}}if(!actn){walk(me,now/110,mv);doorChk()}if(window.gameSocket && window.gameSocket.connected && now-lastNetworkMove>100){
   lastNetworkMove=now;
   window.gameSocket.emit('player:move',{
