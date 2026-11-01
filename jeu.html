@@ -686,7 +686,18 @@ function enter(pid){const was=S.pid;S.pid=pid;if(pid!==was){S.ins=0;fmv=false;fs
  const info=S.ins&&p.t==='home'?BUILD.inside(world,city()):S.ins&&ENT[p.t]?BUILD.room(world,p.t):BUILD[p.t](world,city());addWorldProgress(world,p.t);bd=info;npcs=[];traf=[];if(p.t==='street'&&!S.ins)spawnTraffic();
  const npcCap=S.q?7:14;for(let i=0,c=Math.min(npcCap,Math.round(info.n*S.dens));i<c;i++){const nm=pick(NAMES),job=pick(JOBS[p.t]),n=human({name:nm,job,skin:pick(SK),shirt:pick(CS),pants:pick(['#303d39','#2b3a55','#5a4630']),hs:Math.random()*4|0,hair:'#211b18',acc:Math.random()<.2?1:0});
   const rt=pick(ROUTES[S.ins&&ENT[p.t]?'room':p.t]||ROUTES.home),k=Math.random()*(rt.length-1)|0;n.position.set(rt[k][0],0,rt[k][1]);Object.assign(n.userData,{rt,i:k+1,f:1,fm:0});const bg=mkBag(pick(['#DC241F','#2e6fa8','#8a5a3a','#e8e0d0']));n.userData.a2.add(bg);bg.position.set(0,-.84,.16);bg.visible=false;n.userData.bag=bg;n.userData.d=`Salut ! Moi c’est ${nm}, ${job}. ${LINE[p.t]}`;n.userData.w=R(0,3);nameTag(n,nm,job);setPers(n);world.add(n);npcs.push(n)}
- buildMe();me.visible=true;me.position.set(0,0,info.z-3);me.rotation.y=Math.PI;camera.position.set(0,11,info.z+12);
+ buildMe();me.visible=true;me.position.set(0,0,info.z-3);if(socket && socket.connected){
+  socket.emit('world:join',{
+    city:S.city,
+    place:pid
+  });
+
+  socket.emit('player:move',{
+    x:me.position.x,
+    z:me.position.z,
+    rotation:me.rotation.y
+  });
+ }me.rotation.y=Math.PI;camera.position.set(0,11,info.z+12);
  const gm={sch:1,htl:1,rst:1,std:1,chu:1,prt:1};if(gm[pid])goal(pid);if(pid==='mkt')goal('mkt');if(pid==='pie')goal('pie');if(pid==='cli')goal('cli');sky();hud();save()}
 const TOP=[['joke','😂','Raconter une blague'],['compl','⭐','Faire un compliment'],['foot','⚽','Parler de foot'],['food','🍲','Parler de cuisine'],['city','🏙️','Parler de la ville'],['work','💼','Parler du travail'],['music','🎵','Parler de musique']],TK=TOP.map(t=>t[0]);
 const SAY={joke:['Hahaha ! Elle est excellente, je la raconterai !','Ha… pas mal, pas mal.','Ce genre d’humour, ce n’est pas pour moi…'],
