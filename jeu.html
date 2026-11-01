@@ -686,13 +686,13 @@ function enter(pid){const was=S.pid;S.pid=pid;if(pid!==was){S.ins=0;fmv=false;fs
  const info=S.ins&&p.t==='home'?BUILD.inside(world,city()):S.ins&&ENT[p.t]?BUILD.room(world,p.t):BUILD[p.t](world,city());addWorldProgress(world,p.t);bd=info;npcs=[];traf=[];if(p.t==='street'&&!S.ins)spawnTraffic();
  const npcCap=S.q?7:14;for(let i=0,c=Math.min(npcCap,Math.round(info.n*S.dens));i<c;i++){const nm=pick(NAMES),job=pick(JOBS[p.t]),n=human({name:nm,job,skin:pick(SK),shirt:pick(CS),pants:pick(['#303d39','#2b3a55','#5a4630']),hs:Math.random()*4|0,hair:'#211b18',acc:Math.random()<.2?1:0});
   const rt=pick(ROUTES[S.ins&&ENT[p.t]?'room':p.t]||ROUTES.home),k=Math.random()*(rt.length-1)|0;n.position.set(rt[k][0],0,rt[k][1]);Object.assign(n.userData,{rt,i:k+1,f:1,fm:0});const bg=mkBag(pick(['#DC241F','#2e6fa8','#8a5a3a','#e8e0d0']));n.userData.a2.add(bg);bg.position.set(0,-.84,.16);bg.visible=false;n.userData.bag=bg;n.userData.d=`Salut ! Moi c’est ${nm}, ${job}. ${LINE[p.t]}`;n.userData.w=R(0,3);nameTag(n,nm,job);setPers(n);world.add(n);npcs.push(n)}
- buildMe();me.visible=true;me.position.set(0,0,info.z-3);if(socket && socket.connected){
-  socket.emit('world:join',{
+ buildMe();me.visible=true;me.position.set(0,0,info.z-3);if(window.gameSocket && window.gameSocket.connected){
+  window.gameSocket.emit('world:join',{
     city:S.city,
     place:pid
   });
 
-  socket.emit('player:move',{
+  window.gameSocket.emit('player:move',{
     x:me.position.x,
     z:me.position.z,
     rotation:me.rotation.y
@@ -1294,9 +1294,9 @@ addEventListener('pointerup',()=>dr=null);addEventListener('resize',()=>{if(!$('
 let lastNetworkMove=0;
  let last=performance.now();
 function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;weather(dt);
- if(mode==='play'){let mv=0;if(actn){actn.t+=dt;animAct(now);$('abar').style.width=Math.min(100,actn.t/actn.d*100)+'%';if(actn.t>=actn.d)endAct(1)}else if(target){const dx=target.x-me.position.x,dz=target.z-me.position.z,d=Math.hypot(dx,dz);if(d<.15)target=null;else{const s=Math.min(d,5*dt);const nx=me.position.x+dx/d*s,nz=me.position.z+dz/d*s,B2=(x,z)=>bd.obs&&bd.obs.some(o=>x>o[0]&&x<o[2]&&z>o[1]&&z<o[3]);if(!B2(nx,nz)){me.position.x=nx;me.position.z=nz}else if(!B2(nx,me.position.z))me.position.x=nx;else if(!B2(me.position.x,nz))me.position.z=nz;else target=null;me.rotation.y=Math.atan2(dx,dz);mv=1}}if(!actn){walk(me,now/110,mv);doorChk()}if(socket && socket.connected && now-lastNetworkMove>100){
+ if(mode==='play'){let mv=0;if(actn){actn.t+=dt;animAct(now);$('abar').style.width=Math.min(100,actn.t/actn.d*100)+'%';if(actn.t>=actn.d)endAct(1)}else if(target){const dx=target.x-me.position.x,dz=target.z-me.position.z,d=Math.hypot(dx,dz);if(d<.15)target=null;else{const s=Math.min(d,5*dt);const nx=me.position.x+dx/d*s,nz=me.position.z+dz/d*s,B2=(x,z)=>bd.obs&&bd.obs.some(o=>x>o[0]&&x<o[2]&&z>o[1]&&z<o[3]);if(!B2(nx,nz)){me.position.x=nx;me.position.z=nz}else if(!B2(nx,me.position.z))me.position.x=nx;else if(!B2(me.position.x,nz))me.position.z=nz;else target=null;me.rotation.y=Math.atan2(dx,dz);mv=1}}if(!actn){walk(me,now/110,mv);doorChk()}if(window.gameSocket && window.gameSocket.connected && now-lastNetworkMove>100){
   lastNetworkMove=now;
-  socket.emit('player:move',{
+  window.gameSocket.emit('player:move',{
     x:me.position.x,
     z:me.position.z,
     rotation:me.rotation.y
@@ -1661,7 +1661,7 @@ setInterval(()=>{try{const a=S&&S.adm;if(!S.name||!a)return;if(a.god)for(const[k
  function setTab(t){const pub=t==='public';$o('vomPublic').hidden=!pub;$o('vomPrivate').hidden=pub;$o('vomPublicTab').classList.toggle('primary',pub);$o('vomPrivateTab').classList.toggle('primary',!pub)}
  function renderFeed(el,arr){const box=$o(el);box.innerHTML=arr.map(m=>`<div class="vom-msg"><b>${safe(m.from||m.username||'Joueur')}</b> · ${safe(m.text)}<small>${safe(m.time||'')}</small></div>`).join('');box.scrollTop=box.scrollHeight}
  function renderUsers(){ $o('vomOnlineCount').textContent='Joueurs connectés : '+users.length; $o('vomUsers').innerHTML=users.filter(u=>u.username!==me).map(u=>`<button type="button" data-vom-user="${safe(u.username)}">✉️ ${safe(u.username)}</button>`).join('')||'<span class="vom-muted">Aucun autre joueur connecté pour le moment.</span>'; }
- function connectSocket(){ if(!window.io){status('Le client temps réel ne s’est pas chargé. Ouvre le jeu depuis le serveur web, pas comme un fichier local.');return} if(socket){socket.disconnect();socket=null}socket=window.io({auth:{token},transports:['websocket','polling']});socket.on('connect',()=>status('Connecté au serveur · '+me));socket.on('connect_error',e=>status('Connexion refusée : '+(e.message||'vérifie le compte et le serveur')));socket.on('disconnect',()=>status('Déconnecté du serveur. Vérifie ta connexion Internet.'));socket.on('chat:history',a=>{publicMessages=Array.isArray(a)?a:[];renderFeed('vomPublicFeed',publicMessages)});socket.on('chat:message',m=>{publicMessages.push(m);publicMessages=publicMessages.slice(-100);renderFeed('vomPublicFeed',publicMessages)});socket.on('online:list',a=>{users=Array.isArray(a)?a:[];renderUsers()});socket.on('dm:history',a=>{privateMessages=Array.isArray(a)?a:[];renderFeed('vomPrivateFeed',privateMessages)});socket.on('dm:message',m=>{if((m.from===me&&m.to===$o('vomRecipient').value.trim())||(m.to===me&&m.from===$o('vomRecipient').value.trim())){privateMessages.push(m);privateMessages=privateMessages.slice(-100);renderFeed('vomPrivateFeed',privateMessages)}else if(m.to===me){status('Nouveau message privé de '+m.from+'. Ouvre la messagerie privée et sélectionne son nom.')}});socket.on('server:error',m=>status(typeof m==='string'?m:(m.message||'Action impossible.')));socket.on('world:players', players => {
+ function connectSocket(){ if(!window.io){status('Le client temps réel ne s’est pas chargé. Ouvre le jeu depuis le serveur web, pas comme un fichier local.');return} if(socket){socket.disconnect();socket=null}socket=window.io({auth:{token},transports:['websocket','polling']});window.gameSocket=socket;socket.on('connect',()=>status('Connecté au serveur · '+me));socket.on('connect_error',e=>status('Connexion refusée : '+(e.message||'vérifie le compte et le serveur')));socket.on('disconnect',()=>status('Déconnecté du serveur. Vérifie ta connexion Internet.'));socket.on('chat:history',a=>{publicMessages=Array.isArray(a)?a:[];renderFeed('vomPublicFeed',publicMessages)});socket.on('chat:message',m=>{publicMessages.push(m);publicMessages=publicMessages.slice(-100);renderFeed('vomPublicFeed',publicMessages)});socket.on('online:list',a=>{users=Array.isArray(a)?a:[];renderUsers()});socket.on('dm:history',a=>{privateMessages=Array.isArray(a)?a:[];renderFeed('vomPrivateFeed',privateMessages)});socket.on('dm:message',m=>{if((m.from===me&&m.to===$o('vomRecipient').value.trim())||(m.to===me&&m.from===$o('vomRecipient').value.trim())){privateMessages.push(m);privateMessages=privateMessages.slice(-100);renderFeed('vomPrivateFeed',privateMessages)}else if(m.to===me){status('Nouveau message privé de '+m.from+'. Ouvre la messagerie privée et sélectionne son nom.')}});socket.on('server:error',m=>status(typeof m==='string'?m:(m.message||'Action impossible.')));socket.on('world:players', players => {
   clearRemotePlayers();
   if (Array.isArray(players)) {
     players.forEach(updateRemotePlayer);
