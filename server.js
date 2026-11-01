@@ -84,6 +84,23 @@ app.post('/api/login', async (req, res) => {
   } catch (e) { console.error('login', e); return res.status(500).json({ error: 'Erreur lors de la connexion.' }); }
 });
 app.get('/api/me', (req, res) => { try { const u = verifyToken(readToken(req)); res.json({ username: u.username, createdAt: u.createdAt }); } catch { res.status(401).json({ error: 'Session expirée. Reconnecte-toi.' }); } });
+app.get('/api/save', async (req, res) => {
+  try {
+    const u = verifyToken(readToken(req));
+    await ensureSaveTable();
+
+    const rows = await sql`
+      SELECT save_data
+      FROM game_saves
+      WHERE username = ${u.username}
+    `;
+
+    res.json({ save: rows.length ? rows[0].save_data : null });
+  } catch (e) {
+    console.error('load save', e);
+    res.status(500).json({ error: 'Impossible de charger la sauvegarde.' });
+  }
+});
 
 const online = new Map(); // username lower-case -> socket ID
 const socketUser = new Map();
