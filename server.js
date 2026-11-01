@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
+const { neon } = require('@neondatabase/serverless');
 const scrypt = promisify(crypto.scrypt);
 
 const app = express();
