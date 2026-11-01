@@ -211,11 +211,21 @@ io.on('connection', socket => {
     const messages = db.directMessages.filter(m => (m.from.toLowerCase() === key && m.to.toLowerCase() === other.toLowerCase()) || (m.to.toLowerCase() === key && m.from.toLowerCase() === other.toLowerCase())).slice(-100);
     socket.emit('dm:history', messages);
   });
-  socket.on('disconnect', () => { const k = socketUser.get(socket.id); socketUser.delete(socket.id); if (k && online.get(k)?.id === socket.id) online.delete(k); sendOnlineList(); });
-      if (socket.data.worldRoom) {
+    socket.on('disconnect', () => {
+    if (socket.data.worldRoom) {
       socket.to(socket.data.worldRoom).emit('player:leave', {
         username: user.username
       });
-      }
+    }
+
+    const k = socketUser.get(socket.id);
+    socketUser.delete(socket.id);
+
+    if (k && online.get(k)?.id === socket.id) {
+      online.delete(k);
+    }
+
+    sendOnlineList();
+  });
 });
 server.listen(PORT, '0.0.0.0', () => console.log(`VIE AU CONGO Online lancé sur le port ${PORT}`));
