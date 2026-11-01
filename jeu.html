@@ -1291,9 +1291,17 @@ addEventListener('pointermove',e=>{if(dr&&mode==='ride'){rc.a-=(e.clientX-dr[0])
 addEventListener('pointerup',()=>dr=null);addEventListener('resize',()=>{if(!$('citymap').classList.contains('hidden')&&mr)mview()});addEventListener('pointercancel',()=>dr=null);
 
 /* ---------- Boucle ---------- */
-let last=performance.now();
+let lastNetworkMove=0;
+ let last=performance.now();
 function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;weather(dt);
- if(mode==='play'){let mv=0;if(actn){actn.t+=dt;animAct(now);$('abar').style.width=Math.min(100,actn.t/actn.d*100)+'%';if(actn.t>=actn.d)endAct(1)}else if(target){const dx=target.x-me.position.x,dz=target.z-me.position.z,d=Math.hypot(dx,dz);if(d<.15)target=null;else{const s=Math.min(d,5*dt);const nx=me.position.x+dx/d*s,nz=me.position.z+dz/d*s,B2=(x,z)=>bd.obs&&bd.obs.some(o=>x>o[0]&&x<o[2]&&z>o[1]&&z<o[3]);if(!B2(nx,nz)){me.position.x=nx;me.position.z=nz}else if(!B2(nx,me.position.z))me.position.x=nx;else if(!B2(me.position.x,nz))me.position.z=nz;else target=null;me.rotation.y=Math.atan2(dx,dz);mv=1}}if(!actn){walk(me,now/110,mv);doorChk()}
+ if(mode==='play'){let mv=0;if(actn){actn.t+=dt;animAct(now);$('abar').style.width=Math.min(100,actn.t/actn.d*100)+'%';if(actn.t>=actn.d)endAct(1)}else if(target){const dx=target.x-me.position.x,dz=target.z-me.position.z,d=Math.hypot(dx,dz);if(d<.15)target=null;else{const s=Math.min(d,5*dt);const nx=me.position.x+dx/d*s,nz=me.position.z+dz/d*s,B2=(x,z)=>bd.obs&&bd.obs.some(o=>x>o[0]&&x<o[2]&&z>o[1]&&z<o[3]);if(!B2(nx,nz)){me.position.x=nx;me.position.z=nz}else if(!B2(nx,me.position.z))me.position.x=nx;else if(!B2(me.position.x,nz))me.position.z=nz;else target=null;me.rotation.y=Math.atan2(dx,dz);mv=1}}if(!actn){walk(me,now/110,mv);doorChk()}if(socket && socket.connected && now-lastNetworkMove>100){
+  lastNetworkMove=now;
+  socket.emit('player:move',{
+    x:me.position.x,
+    z:me.position.z,
+    rotation:me.rotation.y
+  });
+ }
   for(const c of traf){const u=c.userData,dz=(me.position.z-c.position.z)*u.dir;let sp=u.v;for(const d of traf)if(d!==c&&d.userData.dir===u.dir){const gp_=(d.position.z-c.position.z)*u.dir;if(gp_>0&&gp_<9)sp=0}if(dz>0&&dz<7&&Math.abs(me.position.x-c.position.x)<2.6)sp=0;u.cur+=(sp-u.cur)*Math.min(1,dt*3);c.position.z+=u.dir*u.cur*dt;if(c.position.z>48)c.position.z=-48;if(c.position.z<-48)c.position.z=48}
   for(const n of npcs){const u=n.userData;
    if(u.fm){u.f=Math.max(0,Math.min(1,u.f+u.fm*dt*1.6));if(u.fm<0&&u.f===0){u.fm=1;u.i=1;u.bag.visible=false;n.position.set(u.rt[0][0],0,u.rt[0][1])}else if(u.fm>0&&u.f===1)u.fm=0;n.scale.setScalar(.04+.96*u.f);walk(n,0,0);continue}
