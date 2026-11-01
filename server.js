@@ -12,6 +12,16 @@ const { neon } = require('@neondatabase/serverless');
 const scrypt = promisify(crypto.scrypt);
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
+async function ensureSaveTable() {
+  if (!sql) throw new Error('DATABASE_URL manquante');
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_saves (
+      username TEXT PRIMARY KEY,
+      save_data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+}
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: false }, maxHttpBufferSize: 1e5, pingTimeout: 20000, pingInterval: 25000 });
