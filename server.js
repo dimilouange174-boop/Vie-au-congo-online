@@ -182,11 +182,18 @@ io.on('connection', socket => {
     if (Math.abs(x) > 1000 || Math.abs(z) > 1000) return;
 
     const player = {
-      username: user.username,
-      x,
-      z,
-      rotation
-    };
+  username: user.username,
+  x,
+  z,
+  rotation,
+  skin: cleanText(payload.skin, 20),
+  shirt: cleanText(payload.shirt, 20),
+  pants: cleanText(payload.pants, 20),
+  shoes: cleanText(payload.shoes, 20),
+  hair: cleanText(payload.hair, 20),
+  hs: Number(payload.hs) || 0,
+  acc: Number(payload.acc) || 0
+};
 
     socket.data.worldPosition = player;
     socket.to(room).emit('player:move', player);
