@@ -417,6 +417,53 @@ function human(o){const g=new T.Group(),s=o.skin||'#75452f',pa=o.pants||'#303d39
  return g}
 function walk(g,t,m){const U=g.userData,a=Math.sin(t)*.75*m;U.l1.rotation.x=a;U.l2.rotation.x=-a;U.a1.rotation.x=-a;U.a2.rotation.x=a}
 function buildMe(){if(me)scene.remove(me);me=human({skin:S.skin,shirt:S.shirt,pants:S.pants,shoes:S.shoes,hair:S.hair,hs:S.hs,acc:S.acc,me:1,name:S.name});me.visible=mode==='play';nameTag(me,S.name||'Toi','Toi');me.userData.tag.position.y=3.7;scene.add(me)}
+ // ---------- Joueurs multijoueurs ----------
+const remotePlayers = new Map();
+
+function clearRemotePlayers(){
+  for(const p of remotePlayers.values()){
+    scene.remove(p);
+  }
+  remotePlayers.clear();
+}
+
+function updateRemotePlayer(data){
+  if(!data || !data.username) return;
+  if(data.username === S.name) return;
+
+  const x = Number(data.x);
+  const z = Number(data.z);
+  const rotation = Number(data.rotation);
+
+  if(![x,z,rotation].every(Number.isFinite)) return;
+
+  let p = remotePlayers.get(data.username);
+
+  if(!p){
+    p = human({
+      name:data.username,
+      skin:'#75452f',
+      shirt:'#009543',
+      pants:'#303d39'
+    });
+
+    nameTag(p,data.username,'Joueur en ligne');
+    scene.add(p);
+    remotePlayers.set(data.username,p);
+  }
+
+  p.position.set(x,0,z);
+  p.rotation.y = rotation;
+}
+
+function removeRemotePlayer(username){
+  const p = remotePlayers.get(username);
+
+  if(p){
+    scene.remove(p);
+    remotePlayers.delete(username);
+  }
+}
 const tree=(g,x,z)=>{box(g,x,1.8,z,.45,3.6,.45,'#765039');const c=new T.Mesh(new T.DodecahedronGeometry(2.4,0),mat('#36734a'));c.position.set(x,5.2,z);c.castShadow=true;g.add(c)};
 const palm=(g,x,z)=>{box(g,x,3.5,z,.4,7,.4,'#8a6a45');for(let i=0;i<6;i++){const a=i*1.05,l=box(g,x+Math.cos(a)*1.6,7,z+Math.sin(a)*1.6,3.4,.1,.7,'#2f8a4a');l.rotation.y=-a}};
 const gr=(g,c)=>box(g,0,-.1,0,120,.2,120,c);
