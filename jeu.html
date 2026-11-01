@@ -1580,8 +1580,127 @@ setInterval(()=>{try{const a=S&&S.adm;if(!S.name||!a)return;if(a.god)for(const[k
  function renderUsers(){ $o('vomOnlineCount').textContent='Joueurs connectés : '+users.length; $o('vomUsers').innerHTML=users.filter(u=>u.username!==me).map(u=>`<button type="button" data-vom-user="${safe(u.username)}">✉️ ${safe(u.username)}</button>`).join('')||'<span class="vom-muted">Aucun autre joueur connecté pour le moment.</span>'; }
  function connectSocket(){ if(!window.io){status('Le client temps réel ne s’est pas chargé. Ouvre le jeu depuis le serveur web, pas comme un fichier local.');return} if(socket){socket.disconnect();socket=null}socket=window.io({auth:{token},transports:['websocket','polling']});socket.on('connect',()=>status('Connecté au serveur · '+me));socket.on('connect_error',e=>status('Connexion refusée : '+(e.message||'vérifie le compte et le serveur')));socket.on('disconnect',()=>status('Déconnecté du serveur. Vérifie ta connexion Internet.'));socket.on('chat:history',a=>{publicMessages=Array.isArray(a)?a:[];renderFeed('vomPublicFeed',publicMessages)});socket.on('chat:message',m=>{publicMessages.push(m);publicMessages=publicMessages.slice(-100);renderFeed('vomPublicFeed',publicMessages)});socket.on('online:list',a=>{users=Array.isArray(a)?a:[];renderUsers()});socket.on('dm:history',a=>{privateMessages=Array.isArray(a)?a:[];renderFeed('vomPrivateFeed',privateMessages)});socket.on('dm:message',m=>{if((m.from===me&&m.to===$o('vomRecipient').value.trim())||(m.to===me&&m.from===$o('vomRecipient').value.trim())){privateMessages.push(m);privateMessages=privateMessages.slice(-100);renderFeed('vomPrivateFeed',privateMessages)}else if(m.to===me){status('Nouveau message privé de '+m.from+'. Ouvre la messagerie privée et sélectionne son nom.')}});socket.on('server:error',m=>status(typeof m==='string'?m:(m.message||'Action impossible.')));socket.on('disconnect',()=>{}); }
  async function api(path,data){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data||{})});const j=await r.json().catch(()=>({error:'Réponse serveur invalide'}));if(!r.ok)throw new Error(j.error||'Erreur serveur');return j}
- async function resume(){try{const r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});if(!r.ok)throw new Error('Session expirée');const j=await r.json();me=j.username;appView();connectSocket()}catch(e){token='';me=null;localStorage.removeItem('vacOnlineToken');authView();status('Connecte-toi ou crée un compte. Le serveur doit être lancé pour jouer en ligne.')}}
- async function authenticate(){const username=$o('vomUser').value.trim(),password=$o('vomPass').value;if(!/^[A-Za-z0-9_]{3,20}$/.test(username)){status('Le nom doit contenir 3 à 20 caractères : lettres, chiffres ou _');return}if(password.length<8){status('Le mot de passe doit contenir au moins 8 caractères.');return}const b=$o('vomAuthSubmit');b.disabled=true;try{const j=await api(mode==='login'?'/api/login':'/api/register',{username,password});token=j.token;me=j.username;localStorage.setItem('vacOnlineToken',token);appView();status('Compte connecté : '+me);connectSocket()}catch(e){status(e.message)}finally{b.disabled=false}}
+  let cloudReady=false,cloudTimer=null;
+
+ const validCloudSave=x=>!!(
+  x&&typeof x==='object'&&!Array.isArray(x)&&
+  typeof x.name==='string'&&x.name.trim()&&
+  typeof x.city==='string'&&CITIES[x.city]
+ );
+
+ async function cloudRequest(method,saveData){
+  const options={
+   method,
+   headers:{
+    ...(token?{Authorization:'Bearer '+token}:{}),
+    ...(saveData?{'Content-Type':'application/json'}:{})
+   }
+  };
+  if(saveData)options.body=JSON.stringify({save:saveData});
+
+  const r=await fetch('/api/save',options);
+  const j=await r.json().catch(()=>({error:'Réponse serveur invalide'}));
+  if(!r.ok)throw new Error(j.error||'Erreur de sauvegarde cloud');
+  return j;
+ }
+
+ async function syncCloud(){
+  cloudReady=false;
+  try{
+   if(!$o('hud').classList.contains('hidden')){
+    status('Recharge le jeu depuis le menu pour synchroniser ta sauvegarde.');
+    return false;
+   }
+
+   const result=await cloudRequest('GET');
+   let local=null;
+
+   try{
+    const raw=localStorage.getItem('vac5');
+    if(raw){
+     const parsed=JSON.parse(raw);
+     if(validCloudSave(parsed))local=parsed;
+    }
+   }catch(e){}
+
+   const cloud=validCloudSave(result.save)?result.save:null;
+
+   if(cloud&&(!local||Number(cloud.t||0)>Number(local.t||0))){
+    Object.assign(S,cloud);
+    localStorage.setItem('vac5',JSON.stringify(cloud));
+   }else if(local){
+    await cloudRequest('PUT',local);
+   }
+
+   cloudReady=true;
+   return true;
+  }catch(e){
+   cloudReady=false;
+   status('Sauvegarde locale conservée. Synchronisation cloud indisponible pour le moment.');
+   return false;
+  }
+ }
+
+ window.__vacCloudSave=serialized=>{
+  if(!cloudReady||!token)return;
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(async()=>{
+   try{
+    const data=JSON.parse(serialized);
+    if(validCloudSave(data))await cloudRequest('PUT',data);
+   }catch(e){
+    status('Sauvegarde locale conservée. Envoi cloud échoué.');
+   }
+  },1800);
+ };
+ async function resume(){
+ try{
+  const r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});
+  if(!r.ok)throw new Error('Session expirée');
+  const j=await r.json();
+  me=j.username;
+  await syncCloud();
+  appView();
+  connectSocket();
+ }catch(e){
+  token='';
+  me=null;
+  localStorage.removeItem('vacOnlineToken');
+  authView();
+  status('Connecte-toi ou crée un compte. Le serveur doit être lancé pour jouer en ligne.');
+ }
+ }
+ async function authenticate(){
+ const username=$o('vomUser').value.trim();
+ const password=$o('vomPass').value;
+
+ if(!/^[A-Za-z0-9_]{3,20}$/.test(username)){
+  status('Le nom doit contenir 3 à 20 caractères : lettres, chiffres ou _');
+  return;
+ }
+ if(password.length<8){
+  status('Le mot de passe doit contenir au moins 8 caractères.');
+  return;
+ }
+
+ const b=$o('vomAuthSubmit');
+ b.disabled=true;
+
+ try{
+  const j=await api(mode==='login'?'/api/login':'/api/register',{username,password});
+  token=j.token;
+  me=j.username;
+  localStorage.setItem('vacOnlineToken',token);
+  await syncCloud();
+  appView();
+  status('Compte connecté : '+me);
+  connectSocket();
+ }catch(e){
+  status(e.message);
+ }finally{
+  b.disabled=false;
+ }
+ }
  function sendPublic(e){e.preventDefault();const text=$o('vomPublicInput').value.trim();if(!text)return;if(!socket||!socket.connected){status('Pas connecté au serveur.');return}socket.emit('chat:send',{text});$o('vomPublicInput').value=''}
  function sendPrivate(e){e.preventDefault();const to=$o('vomRecipient').value.trim(),text=$o('vomPrivateInput').value.trim();if(!/^[A-Za-z0-9_]{3,20}$/.test(to)){status('Entre le nom exact du destinataire.');return}if(to.toLowerCase()===String(me).toLowerCase()){status('Tu ne peux pas t’envoyer un message à toi-même.');return}if(!text)return;if(!socket||!socket.connected){status('Pas connecté au serveur.');return}socket.emit('dm:send',{to,text});$o('vomPrivateInput').value='';setTab('private')}
  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#vacOnlineLauncher')){e.preventDefault();showModal()}});
