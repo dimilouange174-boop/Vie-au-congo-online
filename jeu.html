@@ -557,23 +557,6 @@ const save=()=>{
   }
  }
 };
- S.t=Date.now();
- let serialized;
- try{serialized=JSON.stringify(S)}catch(e){console.warn('Sauvegarde impossible : données non sérialisables.',e);return false}
- // Garde une copie de la dernière sauvegarde valide avant de remplacer la principale.
- try{
-  const previous=localStorage.getItem('vac5');
-  if(previous){
-   try{const p=JSON.parse(previous);if(p&&typeof p.name==='string'&&CITIES[p.city])localStorage.setItem('vac5_backup',previous)}catch(e){}
-  }
- }catch(e){}
- try{localStorage.setItem('vac5',serialized);return true}
- catch(e){
-  // En cas de quota dépassé, retire uniquement la copie de secours puis réessaie.
-  try{localStorage.removeItem('vac5_backup');localStorage.setItem('vac5',serialized);return true}
-  catch(e2){console.warn('Espace de sauvegarde insuffisant. Exporte ta partie depuis les réglages.',e2);return false}
- }
-};
 function applyQuality(){const mobile=innerWidth<700;renderer.setPixelRatio(S.q?Math.min(devicePixelRatio,mobile?1.15:1.35):Math.min(devicePixelRatio,mobile?1.45:1.8));renderer.shadowMap.enabled=!S.q;sun.castShadow=!S.q;renderer.setSize(innerWidth,innerHeight);}
 window.addEventListener('pagehide',()=>save());document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 function tick(s){S.hu-=.02*s;S.th-=.03*s;S.en-=.012*s;S.hy-=.008*s;S.mo-=.006*s;const bad=S.hu<10||S.th<10||S.en<5;S.he+=(bad?-.05:.01)*s;for(const[k]of G)S[k]=cl(S[k])}
