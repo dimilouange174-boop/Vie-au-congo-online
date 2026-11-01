@@ -35,7 +35,17 @@ app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(express.json({ limit: '12kb' }));
 app.use('/api/login', authLimiter); app.use('/api/register', authLimiter);
-app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/jeu.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'jeu.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html']
+}));
 app.get('/health', (req, res) => res.json({ ok: true, service: 'VIE AU CONGO Online', players: online.size }));
 async function hashPassword(password) { const salt = crypto.randomBytes(16).toString('hex'); const hash = await scrypt(password, salt, 64); return { salt, hash: hash.toString('hex') }; }
 async function checkPassword(password, salt, expected) { const got = await scrypt(password, salt, 64); const exp = Buffer.from(expected, 'hex'); return exp.length === got.length && crypto.timingSafeEqual(exp, got); }
